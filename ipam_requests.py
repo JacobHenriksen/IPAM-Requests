@@ -25,7 +25,7 @@ post_response = requests.post(
 
 #print(post_response.json())                                                #DEBUG
 token = post_response.json()['data']['token']
-headers = {'X-Auth-Token': token, 'Content-Type': 'application/json'}
+headers = {'token': token, 'Content-Type': 'application/json'}
 print('Token recieved.')
 #print(f'Token: {token}')                                                   #DEBUG
 
@@ -58,12 +58,25 @@ def read_csv(fileName):
         return ip_list
 
 
+def get_device(address, URL):
+    get_response = requests.get(
+        URL+'/api/ipmgr/devices/search/'+address,
+        headers = {'token': headers['token']},
+        verify=False,
+    )
+    print(get_response.json())
+#    for item in get_response.json()['response']:
+#    print(item['id'], item['hostname'], item['managementIpAddress'])
 
 def availArgs():
 	pass
 
 if __name__ == "__main__":
-    read_csv('test.csv')
+
+    ip_list = read_csv('test_short.csv')
+    for address in ip_list:
+        device = get_device(address, URL)
+
 
 """ 	if len(sys.argv) == 1:
 		print('Please provide a valid .csv-file.')
