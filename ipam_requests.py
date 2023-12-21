@@ -9,10 +9,11 @@ from getpass import getuser
 from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
-##  DEFINE URLS
+##  DEFINE VARIABLES AND URLS
 URL = 'https://ipam.sca.com'
 TOKEN_PATH = '/api/ipmgr/user'
 USERNAME = 'jacobapi'
+csv_file = 'test_short.csv'
 
 ##  RETRIEVE TOKEN
 print('\nRetrieving token...\n')
@@ -73,8 +74,8 @@ def availArgs():
 
 if __name__ == "__main__":
 
-    print(f'Getting device information from {URL}...)
-    ip_list = read_csv('test_short.csv')
+    print(f'Getting device information from {URL}...')
+    ip_list = read_csv(csv_file)
     for address in ip_list:
         device = get_device(address, URL)
 
