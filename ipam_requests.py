@@ -59,12 +59,12 @@ def read_csv(fileName):
 
 
 def get_device(address, URL):
-    get_response = requests.get(
+    response = requests.get(
         URL+'/api/ipmgr/devices/search/'+address,
         headers = {'token': headers['token']},
         verify=False,
     )
-    print(get_response.json())
+    return response.json()
 #    for item in get_response.json()['response']:
 #    print(item['id'], item['hostname'], item['managementIpAddress'])
 
@@ -73,9 +73,15 @@ def availArgs():
 
 if __name__ == "__main__":
 
+    print(f'Getting device information from {URL}...)
     ip_list = read_csv('test_short.csv')
     for address in ip_list:
         device = get_device(address, URL)
+
+        if device['success'] == True:
+            print(f'IP: {device['data'][0]['ip']} | Hostname: {device['data'][0]['hostname']} | Description: {device['data'][0]['description']}')
+        else:
+            print(f'Device IP {address} not found.')
 
 
 """ 	if len(sys.argv) == 1:
@@ -86,7 +92,7 @@ if __name__ == "__main__":
 			print('Missing argument.')
 			availArgs()
 		elif len(sys.argv) == 3:
-			argument = sys.argv[2]
+			argument = sys.argv[2]p
 			if argument == 'count':
 				count(fileName)
 			elif argument == 'list':
