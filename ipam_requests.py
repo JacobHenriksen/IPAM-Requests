@@ -4,6 +4,9 @@ import sys
 import os.path
 from getpass import getpass
 from getpass import getuser
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 ##  DISABLE WARNINGS
 from urllib3.exceptions import InsecureRequestWarning
@@ -14,9 +17,10 @@ URL = 'https://ipam.sca.com'
 TOKEN_PATH = '/api/ipmgr/user'
 USERNAME = 'jacobapi'
 csv_file = 'test_short.csv'
+#csv_file = 'test.csv'
 
 ##  RETRIEVE TOKEN
-print('\nRetrieving token...\n')
+print('\nGenerating session token...')
 post_response = requests.post(
     URL+TOKEN_PATH,
     auth =HTTPBasicAuth(USERNAME, 'qHq4cRIypR41hqZkdPY1'),                  #THIS LINE SHOULD BE COMMENTED BEFORE COMMIT
@@ -24,11 +28,13 @@ post_response = requests.post(
     verify=False
 )
 
-#print(post_response.json())                                                #DEBUG
+logging.debug(post_response.json())                                                #DEBUG
 token = post_response.json()['data']['token']
 headers = {'token': token, 'Content-Type': 'application/json'}
-print('Token recieved.')
-#print(f'Token: {token}')                                                   #DEBUG
+print('Authorization successful.')
+print('Token generated.\n')
+logging.debug(f'Token: {token}')                                                   #DEBUG
+
 
 def validate_ip(ip):
     a = ip.split('.')
@@ -42,6 +48,7 @@ def validate_ip(ip):
             return False
     return True
 
+
 def read_csv(fileName):
     ip_list=[]
     try:
@@ -50,8 +57,7 @@ def read_csv(fileName):
                 indexEnd=line.find(';')-1 
                 ip=line[:indexEnd]
                 if validate_ip(ip) == True and ip not in ip_list:
-                    ip_list.append(ip)
-#        print(ip_list)                                                 
+                    ip_list.append(ip)                                                
     except FileNotFoundError:
         print(f'Logfile {fileName} not found.')
         return 
@@ -66,8 +72,7 @@ def get_device(address, URL):
         verify=False,
     )
     return response.json()
-#    for item in get_response.json()['response']:
-#    print(item['id'], item['hostname'], item['managementIpAddress'])
+
 
 def availArgs():
 	pass
