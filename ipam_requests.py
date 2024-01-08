@@ -32,14 +32,16 @@ csv_file = 'test_short.csv'
 
 ##  RETRIEVE TOKEN
 print('\nGenerating session token...')
+secret=open('pwd.txt', "r")                                             #TEMPORARY, DELETE BEFORE DEPLOYMENT
 post_response = requests.post(
     URL+TOKEN_PATH,
-    auth =HTTPBasicAuth(USERNAME, 'qHq4cRIypR41hqZkdPY1'),                  #THIS LINE SHOULD BE COMMENTED BEFORE COMMIT
-#    auth =HTTPBasicAuth(USERNAME, getpass()),                              #UNCOMMENT THIS LINE BEFORE GIT COMMIT
+    auth=HTTPBasicAuth(USERNAME, secret.readline()),                    #TEMPORARY, DELETE BEFORE DEPLOYMENT
+#    auth =HTTPBasicAuth(USERNAME, getpass()),                          #UNCOMMENT THIS LINE BEFORE DEPLOYMENT
     verify=False
 )
-
-logging.debug(post_response.json())                                                #DEBUG
+secret.close()                                                          #TEMPORARY, DELETE BEFORE DEPLOYMENT
+ 
+logging.debug(post_response.json())                                     #DEBUG
 token = post_response.json()['data']['token']
 headers = {'token': token, 'Content-Type': 'application/json'}
 print('Authorization successful.')
