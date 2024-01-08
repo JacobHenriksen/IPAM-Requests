@@ -87,8 +87,7 @@ def get_device(address, URL):
 def availArgs():
 	pass
 
-if __name__ == "__main__":
-
+def main():
     print(f'Getting device information from {URL}...')
     ip_list = read_csv(csv_file)
     for address in ip_list:
@@ -98,7 +97,6 @@ if __name__ == "__main__":
             print(f'IP: {device['data'][0]['ip']} | Hostname: {device['data'][0]['hostname']} | Description: {device['data'][0]['description']}')
         else:
             print(f'Device IP {address} not found.')
-
 
 """    if len(sys.argv) == 1:
         print('Please provide a valid .csv-file.')
@@ -118,3 +116,6 @@ if __name__ == "__main__":
                 availArgs()
         else:
             print('\nInvalid input.')"""
+
+if __name__ == "__main__":
+    main()
