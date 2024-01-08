@@ -6,7 +6,18 @@ from getpass import getpass
 from getpass import getuser
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+## LOGGING & DEBUGGING
+#logging.basicConfig(level=logging.DEBUG)
+#logging.getLogger("urllib3").setLevel(logging.DEBUG)
+
+if len(sys.argv) > 1:
+    if sys.argv[1].find("--log") != -1:
+        loglevel = sys.argv[1][sys.argv[1].rfind("=")+1:]
+
+        numeric_level = getattr(logging, loglevel.upper(), None)
+        if not isinstance(numeric_level, int):
+            raise ValueError('Invalid log level: %s' % loglevel)
+        logging.basicConfig(level=numeric_level)
 
 ##  DISABLE WARNINGS
 from urllib3.exceptions import InsecureRequestWarning
@@ -33,7 +44,6 @@ token = post_response.json()['data']['token']
 headers = {'token': token, 'Content-Type': 'application/json'}
 print('Authorization successful.')
 print('Token generated.\n')
-logging.debug(f'Token: {token}')                                                   #DEBUG
 
 
 def validate_ip(ip):
@@ -84,27 +94,27 @@ if __name__ == "__main__":
     for address in ip_list:
         device = get_device(address, URL)
 
-        if device['success'] == True:
+        if device['success'] is True:
             print(f'IP: {device['data'][0]['ip']} | Hostname: {device['data'][0]['hostname']} | Description: {device['data'][0]['description']}')
         else:
             print(f'Device IP {address} not found.')
 
 
-""" 	if len(sys.argv) == 1:
-		print('Please provide a valid .csv-file.')
-	else:
-		fileName = sys.argv[1]
-		if len(sys.argv) == 2:
-			print('Missing argument.')
-			availArgs()
-		elif len(sys.argv) == 3:
-			argument = sys.argv[2]p
-			if argument == 'count':
-				count(fileName)
-			elif argument == 'list':
-				makeList(fileName)
-			else:
-				print('\nInvalid argument.\n')
-				availArgs()
-		else:
-			print('\nInvalid input.') """
+"""    if len(sys.argv) == 1:
+        print('Please provide a valid .csv-file.')
+    else:
+        fileName = sys.argv[1]
+        if len(sys.argv) == 2:
+            print('Missing argument.')
+            availArgs()
+        elif len(sys.argv) == 3:
+            argument = sys.argv[2]p
+            if argument == 'count':
+                count(fileName)
+            elif argument == 'list':
+                makeList(fileName)
+            else:
+                print('\nInvalid argument.\n')
+                availArgs()
+        else:
+            print('\nInvalid input.')"""
