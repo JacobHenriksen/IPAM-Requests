@@ -27,8 +27,6 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 URL = 'https://ipam.sca.com'
 TOKEN_PATH = '/api/ipmgr/user'
 USERNAME = 'jacobapi'
-csv_file = 'test_short.csv'
-#csv_file = 'test.csv'
 
 ##  RETRIEVE TOKEN
 print('\nGenerating session token...')
@@ -85,22 +83,23 @@ def get_device(address, URL):
     )
     return response.json()
 
+def print_output(device, address):
+    if device['success'] is True:
+        print(f'IP: {device['data'][0]['ip']} | Hostname: {device['data'][0]['hostname']} | Description: {device['data'][0]['description']}')
+    else:
+        print(f'Device IP {address} not found.')
+
+def export():
+    pass
 
 def availArgs():
 	pass
 
 def main():
     print(f'Getting device information from {URL}...')
-    ip_list = read_csv(csv_file)
-    for address in ip_list:
-        device = get_device(address, URL)
+    ip_list = read_csv(sys.argv[1])
 
-        if device['success'] is True:
-            print(f'IP: {device['data'][0]['ip']} | Hostname: {device['data'][0]['hostname']} | Description: {device['data'][0]['description']}')
-        else:
-            print(f'Device IP {address} not found.')
-
-"""    if len(sys.argv) == 1:
+    if len(sys.argv) == 1:
         print('Please provide a valid .csv-file.')
     else:
         fileName = sys.argv[1]
@@ -108,16 +107,18 @@ def main():
             print('Missing argument.')
             availArgs()
         elif len(sys.argv) == 3:
-            argument = sys.argv[2]p
-            if argument == 'count':
-                count(fileName)
-            elif argument == 'list':
-                makeList(fileName)
+            argument = sys.argv[2]
+            if argument == 'print':
+                for address in ip_list:
+                    device = get_device(address, URL)
+                    print_output(device, address)
+            elif argument == 'export':
+                export(fileName)
             else:
                 print('\nInvalid argument.\n')
                 availArgs()
         else:
-            print('\nInvalid input.')"""
+            print('\nInvalid input.')
 
 if __name__ == "__main__":
     main()
