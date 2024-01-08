@@ -5,6 +5,7 @@ import os.path
 from getpass import getpass
 from getpass import getuser
 import logging
+import yaml
 
 ## LOGGING & DEBUGGING
 #logging.basicConfig(level=logging.DEBUG)
@@ -27,6 +28,7 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 URL = 'https://ipam.sca.com'
 TOKEN_PATH = '/api/ipmgr/user'
 USERNAME = 'jacobapi'
+export_file_name = 'ipam_requests_'+sys.argv[1].strip('.\\')+'_export.yaml'
 
 ##  RETRIEVE TOKEN
 print('\nGenerating session token...')
@@ -64,7 +66,7 @@ def read_csv(fileName):
     try:
         with open(fileName, mode='r') as f:
             for line in f:
-                indexEnd=line.find(';')-1 
+                indexEnd=line.find(';') 
                 ip=line[:indexEnd]
                 if validate_ip(ip) == True and ip not in ip_list:
                     ip_list.append(ip)                                                
@@ -89,14 +91,25 @@ def print_output(device, address):
     else:
         print(f'Device IP {address} not found.')
 
-def export():
-    pass
+def export(ip_list, export_file_name):
+    result = {}
+    for address in ip_list:
+        device = get_device(address, URL)
+        if device['success'] is True:
+            result[address]=device['data'][0]['hostname'].strip()+' | '+device['data'][0]['description'].strip()
+            result[address]
+        else:
+            result[address]='Device not found.'
+
+    print(f'Exporting to {export_file_name}\n')
+    with open(export_file_name, 'a') as file:
+        yaml.dump(result, file)
 
 def availArgs():
 	pass
 
 def main():
-    print(f'Getting device information from {URL}...')
+    print(f'Requesting device information from {URL}...')
     ip_list = read_csv(sys.argv[1])
 
     if len(sys.argv) == 1:
@@ -113,7 +126,7 @@ def main():
                     device = get_device(address, URL)
                     print_output(device, address)
             elif argument == 'export':
-                export(fileName)
+                export(ip_list, export_file_name)
             else:
                 print('\nInvalid argument.\n')
                 availArgs()
