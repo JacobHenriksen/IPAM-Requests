@@ -28,7 +28,7 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 URL = 'https://ipam.sca.com'
 TOKEN_PATH = '/api/ipmgr/user'
 USERNAME = 'jacobapi'
-export_file_name = 'ipam_requests_'+sys.argv[1].strip('.\\')+'_export.yaml'
+export_file_name = f'ipam_requests_{sys.argv[1][sys.argv[1].find('.')+2:sys.argv[1].rfind('.')]}_export.yaml'
 
 ##  RETRIEVE TOKEN
 print('\nGenerating session token...')
