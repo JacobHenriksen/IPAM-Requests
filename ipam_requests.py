@@ -106,7 +106,9 @@ def export(ip_list, export_file_name):
         yaml.dump(result, file)
 
 def availArgs():
-	pass
+	print('Valid arguments:')
+	print('print\t- Print output.')
+	print('export\t- Export output in .yaml-format.')
 
 def main():
     print(f'Requesting device information from {URL}...')
@@ -120,7 +122,7 @@ def main():
             print('Missing argument.')
             availArgs()
         elif len(sys.argv) == 3:
-            argument = sys.argv[2]
+            argument = sys.argv[2].lower()
             if argument == 'print':
                 for address in ip_list:
                     device = get_device(address, URL)
