@@ -8,8 +8,11 @@ import logging
 import yaml
 
 ## LOGGING & DEBUGGING
-#logging.basicConfig(level=logging.DEBUG)
-#logging.getLogger("urllib3").setLevel(logging.DEBUG)
+
+debugging = False
+if debugging is True:
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger("urllib3").setLevel(logging.DEBUG)
 
 if len(sys.argv) > 1:
     if sys.argv[1].find("--log") != -1:
@@ -64,12 +67,14 @@ def validate_ip(ip):
 def read_csv(fileName):
     ip_list=[]
     try:
-        with open(fileName, mode='r') as f:
-            for line in f:
-                indexEnd=line.find(';') 
-                ip=line[:indexEnd]
-                if validate_ip(ip) == True and ip not in ip_list:
-                    ip_list.append(ip)                                                
+        with open(fileName, mode='r', encoding='utf-8-sig') as f:
+            for line_num, line_content in enumerate(f):
+                indexEnd=line_content.find(';') 
+                ip=line_content[:indexEnd]
+                if validate_ip(ip) is True and ip not in ip_list:
+                    ip_list.append(ip)
+                elif validate_ip(ip) is False:
+                    print(f'CAUTION! Line {line_num+1}: {ip} is not a valid IP-address.')                                                
     except FileNotFoundError:
         print(f'Logfile {fileName} not found.')
         return 
@@ -83,6 +88,7 @@ def get_device(address, URL):
         headers = {'token': headers['token']},
         verify=False,
     )
+    logging.debug(response.json())
     return response.json()
 
 def print_output(device, address):
@@ -92,28 +98,26 @@ def print_output(device, address):
         print(f'Device IP {address} not found.')
 
 def export(ip_list, export_file_name):
-    result = {}
+
+    response = {}
     for address in ip_list:
         device = get_device(address, URL)
         if device['success'] is True:
-            result[address]=device['data'][0]['hostname'].strip()+' | '+device['data'][0]['description'].strip()
-            result[address]
+            response[address]=device['data'][0]['hostname'].strip()+' | '+device['data'][0]['description'].strip()
+            response[address]
         else:
-            result[address]='Device not found.'
+            response[address]='Device not found.'
 
     print(f'Exporting to {export_file_name}\n')
     with open(export_file_name, 'a') as file:
-        yaml.dump(result, file)
+        yaml.dump(response, file)
 
 def availArgs():
 	print('Valid arguments:')
-	print('print\t- Print output.')
-	print('export\t- Export output in .yaml-format.')
+	print('\tprint\t- Print output.')
+	print('\texport\t- Export output in .yaml-format.\n')
 
 def main():
-    print(f'Requesting device information from {URL}...')
-    ip_list = read_csv(sys.argv[1])
-
     if len(sys.argv) == 1:
         print('Please provide a valid .csv-file.')
     else:
@@ -122,12 +126,15 @@ def main():
             print('Missing argument.')
             availArgs()
         elif len(sys.argv) == 3:
-            argument = sys.argv[2].lower()
-            if argument == 'print':
+            option = sys.argv[2].lower()
+            ip_list = read_csv(sys.argv[1])
+            if option == 'print':
+                print(f'\nRequesting device information from {URL}...')
                 for address in ip_list:
                     device = get_device(address, URL)
                     print_output(device, address)
-            elif argument == 'export':
+            elif option == 'export':
+                print(f'\nRequesting device information from {URL}...')
                 export(ip_list, export_file_name)
             else:
                 print('\nInvalid argument.\n')
