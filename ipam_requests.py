@@ -10,6 +10,7 @@ import yaml
 ## LOGGING & DEBUGGING
 
 debugging = False
+#debugging = True
 if debugging is True:
     logging.basicConfig(level=logging.DEBUG)
     logging.getLogger("urllib3").setLevel(logging.DEBUG)
@@ -33,22 +34,28 @@ TOKEN_PATH = '/api/ipmgr/user'
 USERNAME = 'jacobapi'
 export_file_name = f'ipam_requests_{sys.argv[1][sys.argv[1].find('.')+2:sys.argv[1].rfind('.')]}_export.yaml'
 
-##  RETRIEVE TOKEN
-print('\nGenerating session token...')
-secret=open('pwd.txt', "r")                                             #TEMPORARY, DELETE BEFORE DEPLOYMENT
-post_response = requests.post(
-    URL+TOKEN_PATH,
-    auth=HTTPBasicAuth(USERNAME, secret.readline()),                    #TEMPORARY, DELETE BEFORE DEPLOYMENT
-#    auth =HTTPBasicAuth(USERNAME, getpass()),                          #UNCOMMENT THIS LINE BEFORE DEPLOYMENT
-    verify=False
-)
-secret.close()                                                          #TEMPORARY, DELETE BEFORE DEPLOYMENT
- 
-logging.debug(post_response.json())                                     #DEBUG
-token = post_response.json()['data']['token']
-headers = {'token': token, 'Content-Type': 'application/json'}
-print('Authorization successful.')
-print('Token generated.\n')
+
+def token_post_request():
+    ##  RETRIEVE TOKEN
+    print('\nGenerating session token...')
+    secret=open('pwd.txt', "r")                                             #TEMPORARY, DELETE BEFORE DEPLOYMENT
+
+    post_response = requests.post(
+        URL+TOKEN_PATH,
+        auth=HTTPBasicAuth(USERNAME, secret.readline()),                    #TEMPORARY, DELETE BEFORE DEPLOYMENT
+    #    auth =HTTPBasicAuth(USERNAME, getpass()),                          #UNCOMMENT THIS LINE BEFORE DEPLOYMENT
+        verify=False
+    )
+    secret.close()  
+    if post_response.json()['success'] == False:
+        print(f'Error: {post_response.json()['code']} {post_response.json()['message']}')
+        return False
+    else:                                                     
+        logging.debug(post_response.json())                                     #DEBUG
+        token = post_response.json()['data']['token']
+        print('Authorization successful.')
+        print('Token generated.\n')
+        return token
 
 
 def validate_ip(ip):
@@ -74,7 +81,7 @@ def read_csv(fileName):
                 if validate_ip(ip) is True and ip not in ip_list:
                     ip_list.append(ip)
                 elif validate_ip(ip) is False:
-                    print(f'CAUTION! Line {line_num+1}: {ip} is not a valid IP-address.')                                                
+                    print(f'CAUTION! line {line_num+1}, invalid IP-address: {ip}')                                                
     except FileNotFoundError:
         print(f'Logfile {fileName} not found.')
         return 
@@ -82,7 +89,8 @@ def read_csv(fileName):
         return ip_list
 
 
-def get_device(address, URL):
+def get_device(address, URL, token):
+    headers = {'token': token, 'Content-Type': 'application/json'}
     response = requests.get(
         URL+'/api/ipmgr/devices/search/'+address,
         headers = {'token': headers['token']},
@@ -126,21 +134,28 @@ def main():
             print('Missing argument.')
             availArgs()
         elif len(sys.argv) == 3:
-            option = sys.argv[2].lower()
-            ip_list = read_csv(sys.argv[1])
-            if option == 'print':
-                print(f'\nRequesting device information from {URL}...')
-                for address in ip_list:
-                    device = get_device(address, URL)
-                    print_output(device, address)
-            elif option == 'export':
-                print(f'\nRequesting device information from {URL}...')
-                export(ip_list, export_file_name)
+            token = token_post_request()
+            if token is False:
+                return
             else:
-                print('\nInvalid argument.\n')
-                availArgs()
+                option = sys.argv[2].lower()
+                ip_list = read_csv(sys.argv[1])
+                if option == 'print':
+                    print(f'\nRequesting device information from {URL}...')
+                    for address in ip_list:
+                        device = get_device(address, URL, token)
+                        print_output(device, address)
+                    print()
+                elif option == 'export':
+                    print(f'\nRequesting device information from {URL}...')
+                    export(ip_list, export_file_name)
+                else:
+                    print('\nInvalid argument.\n')
+                    availArgs()
         else:
             print('\nInvalid input.')
 
 if __name__ == "__main__":
     main()
+    print()
+
