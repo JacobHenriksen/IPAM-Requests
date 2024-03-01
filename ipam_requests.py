@@ -36,7 +36,21 @@ URL = 'https://ipam.sca.com'
 APP_ID = 'python'
 TOKEN_PATH = f'/api/{APP_ID}/user'
 USERNAME = 'jacobapi'
-export_file_name = f'{sys.argv[1][sys.argv[1].find('.')+2:sys.argv[1].rfind('.')]}_ipam_search_export.yaml'
+
+
+## CHECKING FOR EXISTING FILES WITH SAME NAME AND SETTING UNIQUE FILENAME
+def set_file_name():
+    ident = ''
+    ident_num = 1
+    while True:
+        export_file_name = f'{sys.argv[1][sys.argv[1].find('.')+2:sys.argv[1].rfind('.')]}_ipam_search_export{ident}.yaml'
+
+        if os.path.exists(export_file_name) is True:
+            ident = f'({ident_num})'
+            ident_num+=1
+        else:
+            break
+    return export_file_name
 
 
 ## GENERATING SESSION TOKEN
@@ -124,7 +138,7 @@ def print_output(device, device_address):
 
 
 ## EXPORTING THE RESULT AS YAML
-def export_yaml(ip_list, export_file_name, token):
+def export_yaml(ip_list, token):
     print(f'\nRequesting device information from {URL}...')
     export_data = []
     for device_address in ip_list:
@@ -137,7 +151,8 @@ def export_yaml(ip_list, export_file_name, token):
                 export_data.append({'IP': device_address, 'Hostname': device_data['hostname'], 'Description': device_data['description']})
         else:
             export_data.append({'IP': device_address, 'Hostname': 'Device not found.', 'Description': None})
-
+    
+    export_file_name=set_file_name()
     print(f'Exporting to {export_file_name}\n')
     with open(export_file_name, 'a') as yamlfile:
         yaml.dump(export_data, yamlfile, default_flow_style=False, sort_keys=False)
@@ -201,7 +216,7 @@ def main():
                         print_output(device, device_address)
                     print()
                 elif option == 'export':
-                    export_yaml(ip_list, export_file_name, token)
+                    export_yaml(ip_list, token)
                 elif option == 'count':
                     print(len(ip_list))
                 else:
