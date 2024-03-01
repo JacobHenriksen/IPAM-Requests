@@ -7,8 +7,8 @@ import logging
 import yaml
 import csv
 
-## LOGGING & DEBUGGING
 
+## LOGGING & DEBUGGING
 debugging = False
 #debugging = True
 if debugging is True:
@@ -24,9 +24,11 @@ if len(sys.argv) > 1:
             raise ValueError('Invalid log level: %s' % loglevel)
         logging.basicConfig(level=numeric_level)
 
+
 ##  DISABLE WARNINGS
 from urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
 
 ##  DEFINE VARIABLES AND URLS
 URL = 'https://ipam.sca.com'
@@ -37,7 +39,7 @@ USERNAME = 'jacobapi'
 export_file_name = f'{sys.argv[1][sys.argv[1].find('.')+2:sys.argv[1].rfind('.')]}_ipam_search_export.yaml'
 
 
-# GENERATING SESSION TOKEN
+## GENERATING SESSION TOKEN
 def request_token():
     secret=open('pwd.txt', "r")                                             #TEMPORARY, DELETE BEFORE DEPLOYMENT
     post_response = requests.post(
@@ -57,7 +59,7 @@ def request_token():
         return token
 
 
-# VALIDATING IPV4 FORMAT
+## VALIDATING IPV4 FORMAT
 def validate_ip(ip):
     a = ip.split('.')
     if len(a) != 4:
@@ -71,7 +73,7 @@ def validate_ip(ip):
     return True
 
 
-# READING PROVIDED CSV-FILE AND APPENDING TO LIST
+## READING PROVIDED CSV-FILE AND APPENDING TO LIST
 def read_csv(fileName):
     print(f'Reading {fileName}... ')
     ip_list=[]
@@ -92,7 +94,7 @@ def read_csv(fileName):
         return ip_list
 
 
-# MAKING GET REQUEST FOR IP-ADDRESSES
+## MAKING GET REQUEST FOR IP-ADDRESSES
 def get_device(device_address, URL, token):
     headers = {'token': token, 'Content-Type': 'application/json'}
     response = requests.get(
@@ -108,9 +110,7 @@ def get_device(device_address, URL, token):
     return response.json()
 
 
-
-
-# PRINTING THE RESULT
+## PRINTING THE RESULT
 def print_output(device, device_address):
     device_data = device['data']['addresses']['data'][0]
     if device['success'] is True and device['data']['addresses']['data'] != 'No addresses found':
@@ -123,7 +123,7 @@ def print_output(device, device_address):
         print(f'Device IP {device_address} not found.')
 
 
-# EXPORTING THE RESULT AS YAML
+## EXPORTING THE RESULT AS YAML
 def export_yaml(ip_list, export_file_name, token):
     print(f'\nRequesting device information from {URL}...')
     export_data = []
@@ -143,7 +143,7 @@ def export_yaml(ip_list, export_file_name, token):
         yaml.dump(export_data, yamlfile, default_flow_style=False, sort_keys=False)
 
 
-# EXPORTING THE RESULT AS CSV                           BROKEN
+## EXPORTING THE RESULT AS CSV                           BROKEN
 def export_csv(ip_list, export_file_name, token):
     print(f'\nRequesting device information from {URL}...')
     export_data = []
@@ -170,14 +170,14 @@ def export_csv(ip_list, export_file_name, token):
             writer.writerow([item['IP'], item['Hostname'], item['Description']])
 
 
-# PRINTING AVAILABLE CLI ARGUMENTS
+## PRINTING AVAILABLE CLI ARGUMENTS
 def availArgs():
     print('Valid arguments:')
     print('\tprint\t- Print output.')
     print('\texport\t- Export output in .yaml-format.\n')
     print('\tcount\t - Count number of devices.\n')
 
-# MAIN
+## MAIN
 def main():
     print()
     if len(sys.argv) == 1:
