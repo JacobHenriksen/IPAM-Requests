@@ -2,3 +2,5 @@ __pycache__/
 *.yaml
 *.csv
 pwd.txt
+test.py
+debug.txt
