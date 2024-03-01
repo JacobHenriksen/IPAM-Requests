@@ -2,10 +2,10 @@ import requests
 from requests.auth import HTTPBasicAuth
 import sys
 import os.path
-from getpass import getpass
-from getpass import getuser
+from getpass import getpass, getuser                                # Might not be needed 
 import logging
 import yaml
+import csv
 
 ## LOGGING & DEBUGGING
 
@@ -30,34 +30,34 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 ##  DEFINE VARIABLES AND URLS
 URL = 'https://ipam.sca.com'
-TOKEN_PATH = '/api/ipmgr/user'
+#URL = 'https://ipamtest.sca.com'                                            #TEST URL
+APP_ID = 'python'
+TOKEN_PATH = f'/api/{APP_ID}/user'
 USERNAME = 'jacobapi'
-export_file_name = f'ipam_requests_{sys.argv[1][sys.argv[1].find('.')+2:sys.argv[1].rfind('.')]}_export.yaml'
+export_file_name = f'{sys.argv[1][sys.argv[1].find('.')+2:sys.argv[1].rfind('.')]}_ipam_search_export.yaml'
 
 
-def token_post_request():
-    ##  RETRIEVE TOKEN
-    print('\nGenerating session token...')
+# GENERATING SESSION TOKEN
+def request_token():
     secret=open('pwd.txt', "r")                                             #TEMPORARY, DELETE BEFORE DEPLOYMENT
-
     post_response = requests.post(
         URL+TOKEN_PATH,
         auth=HTTPBasicAuth(USERNAME, secret.readline()),                    #TEMPORARY, DELETE BEFORE DEPLOYMENT
     #    auth =HTTPBasicAuth(USERNAME, getpass()),                          #UNCOMMENT THIS LINE BEFORE DEPLOYMENT
-        verify=False
+        verify=True
     )
     secret.close()  
-    if post_response.json()['success'] == False:
+
+    if post_response.json()['success'] is not True:
         print(f'Error: {post_response.json()['code']} {post_response.json()['message']}')
         return False
     else:                                                     
         logging.debug(post_response.json())                                     #DEBUG
         token = post_response.json()['data']['token']
-        print('Authorization successful.')
-        print('Token generated.\n')
         return token
 
 
+# VALIDATING IPV4 FORMAT
 def validate_ip(ip):
     a = ip.split('.')
     if len(a) != 4:
@@ -71,7 +71,9 @@ def validate_ip(ip):
     return True
 
 
+# READING PROVIDED CSV-FILE AND APPENDING TO LIST
 def read_csv(fileName):
+    print(f'Reading {fileName}... ')
     ip_list=[]
     try:
         with open(fileName, mode='r', encoding='utf-8-sig') as f:
@@ -81,7 +83,8 @@ def read_csv(fileName):
                 if validate_ip(ip) is True and ip not in ip_list:
                     ip_list.append(ip)
                 elif validate_ip(ip) is False:
-                    print(f'CAUTION! line {line_num+1}, invalid IP-address: {ip}')                                                
+                    if validate_ip(ip) != '':
+                        print(f'CAUTION! line {line_num+1}, invalid IP-address: {ip}')                                                
     except FileNotFoundError:
         print(f'Logfile {fileName} not found.')
         return 
@@ -89,43 +92,94 @@ def read_csv(fileName):
         return ip_list
 
 
-def get_device(address, URL, token):
+# MAKING GET REQUEST FOR IP-ADDRESSES
+def get_device(device_address, URL, token):
     headers = {'token': token, 'Content-Type': 'application/json'}
     response = requests.get(
-        URL+'/api/ipmgr/devices/search/'+address,
+        f'{URL}/api/{APP_ID}/search/{device_address}/',
         headers = {'token': headers['token']},
-        verify=False,
-    )
+        params = {'addresses': 1, 
+                  'subnets': 0,
+                  'vlan': 0,
+                  'vrf': 0},
+        verify=True,
+        )
     logging.debug(response.json())
     return response.json()
 
-def print_output(device, address):
-    if device['success'] is True:
-        print(f'IP: {device['data'][0]['ip']} | Hostname: {device['data'][0]['hostname']} | Description: {device['data'][0]['description']}')
-    else:
-        print(f'Device IP {address} not found.')
 
-def export(ip_list, export_file_name):
 
-    response = {}
-    for address in ip_list:
-        device = get_device(address, URL)
-        if device['success'] is True:
-            response[address]=device['data'][0]['hostname'].strip()+' | '+device['data'][0]['description'].strip()
-            response[address]
+
+# PRINTING THE RESULT
+def print_output(device, device_address):
+    device_data = device['data']['addresses']['data'][0]
+    if device['success'] is True and device['data']['addresses']['data'] != 'No addresses found':
+        if device_data['description'] is None:
+            print(f"IP: {device_address:<20} | Hostname: {device_data['hostname']:<40} | Description: ")
         else:
-            response[address]='Device not found.'
+            print(f"IP: {device_address:<20} | Hostname: {device_data['hostname']:<40} | Description: {device_data['description']}")
+
+    else:
+        print(f'Device IP {device_address} not found.')
+
+
+# EXPORTING THE RESULT AS YAML
+def export_yaml(ip_list, export_file_name, token):
+    print(f'\nRequesting device information from {URL}...')
+    export_data = []
+    for device_address in ip_list:
+        device = get_device(device_address, URL, token)
+        device_data = device['data']['addresses']['data'][0]
+        if device['success'] is True and device['data']['addresses']['data'] != 'No addresses found':
+            if device_data['description'] is None:
+                export_data.append({'IP': device_address, 'Hostname': device_data['hostname'], 'Description': None})
+            else:
+                export_data.append({'IP': device_address, 'Hostname': device_data['hostname'], 'Description': device_data['description']})
+        else:
+            export_data.append({'IP': device_address, 'Hostname': 'Device not found.', 'Description': None})
 
     print(f'Exporting to {export_file_name}\n')
-    with open(export_file_name, 'a') as file:
-        yaml.dump(response, file)
+    with open(export_file_name, 'a') as yamlfile:
+        yaml.dump(export_data, yamlfile, default_flow_style=False, sort_keys=False)
 
+
+# EXPORTING THE RESULT AS CSV                           BROKEN
+def export_csv(ip_list, export_file_name, token):
+    print(f'\nRequesting device information from {URL}...')
+    export_data = []
+    for device_address in ip_list:
+        device = get_device(device_address, URL, token)
+        device_data = device['data']['addresses']['data'][0]
+        if device['success'] is True and device['data']['addresses']['data'] != 'No addresses found':
+            if device_data['description'] is None:
+                export_data.append({'IP': device_address, 'Hostname': device_data['hostname'], 'Description': None})
+            else:
+                export_data.append({'IP': device_address, 'Hostname': device_data['hostname'], 'Description': device_data['description']})
+        else:
+            export_data.append({'IP': device_address, 'Hostname': 'Device not found.', 'Description': None})
+
+    print(f'Exporting to {export_file_name}\n')
+    with open(export_file_name, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        
+        # Write header row
+        writer.writerow(['IP', 'Hostname', 'Description'])
+        
+        # Write data rows
+        for item in export_data:
+            writer.writerow([item['IP'], item['Hostname'], item['Description']])
+
+
+# PRINTING AVAILABLE CLI ARGUMENTS
 def availArgs():
-	print('Valid arguments:')
-	print('\tprint\t- Print output.')
-	print('\texport\t- Export output in .yaml-format.\n')
+    print('Valid arguments:')
+    print('\tprint\t- Print output.')
+    print('\texport\t- Export output in .yaml-format.\n')
+    print('\tcount\t - Count number of devices.\n')
 
+# MAIN
 def main():
+    print()
     if len(sys.argv) == 1:
         print('Please provide a valid .csv-file.')
     else:
@@ -134,7 +188,7 @@ def main():
             print('Missing argument.')
             availArgs()
         elif len(sys.argv) == 3:
-            token = token_post_request()
+            token = request_token()
             if token is False:
                 return
             else:
@@ -142,20 +196,21 @@ def main():
                 ip_list = read_csv(sys.argv[1])
                 if option == 'print':
                     print(f'\nRequesting device information from {URL}...')
-                    for address in ip_list:
-                        device = get_device(address, URL, token)
-                        print_output(device, address)
+                    for device_address in ip_list:
+                        device = get_device(device_address, URL, token)
+                        print_output(device, device_address)
                     print()
                 elif option == 'export':
-                    print(f'\nRequesting device information from {URL}...')
-                    export(ip_list, export_file_name)
+                    export_yaml(ip_list, export_file_name, token)
+                elif option == 'count':
+                    print(len(ip_list))
                 else:
                     print('\nInvalid argument.\n')
                     availArgs()
         else:
             print('\nInvalid input.')
 
+
 if __name__ == "__main__":
     main()
     print()
-
